@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600;700&display=swap");
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-surface-900 text-white antialiased;
+    font-family: "Inter", system-ui, sans-serif;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #1a1a1a;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #22c55e;
+  }
+}
+
+@layer components {
+  .admin-input {
+    @apply w-full rounded-lg border border-white/10 bg-surface-600 px-3 py-2 text-sm text-white placeholder-gray-500 outline-none transition focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/30;
+  }
+
+  .admin-btn {
+    @apply rounded-lg px-4 py-2 text-sm font-semibold transition active:scale-[0.98];
+  }
+
+  .admin-btn-primary {
+    @apply admin-btn bg-brand-500 text-black hover:bg-brand-400;
+  }
+
+  .admin-btn-danger {
+    @apply admin-btn bg-red-500/20 text-red-400 hover:bg-red-500/30;
+  }
+
+  .admin-btn-secondary {
+    @apply admin-btn border border-white/10 bg-surface-600 text-gray-300 hover:bg-surface-500;
+  }
+
+  .admin-table {
+    @apply w-full text-left text-sm;
+  }
+
+  .admin-table th {
+    @apply border-b border-white/10 px-3 py-3 text-xs font-semibold uppercase tracking-wider text-gray-400;
+  }
+
+  .admin-table td {
+    @apply border-b border-white/5 px-3 py-3 text-gray-300;
+  }
+
+  .status-badge {
+    @apply inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+
+  .status-paid {
+    @apply status-badge bg-brand-500/20 text-brand-400;
+  }
+
+  .status-pending {
+    @apply status-badge bg-yellow-500/20 text-yellow-400;
+  }
+}
