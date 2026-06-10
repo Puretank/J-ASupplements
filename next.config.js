@@ -16,17 +16,11 @@ const nextConfig = {
       }
     ]
   },
-  experimental: {
-    serverComponentsExternalPackages: ["puppeteer-core", "@sparticuz/chromium"]
-  },
-  webpack: (config) => {
-    config.externals = config.externals || [];
-    config.externals.push({
-      '@sparticuz/chromium': 'commonjs @sparticuz/chromium',
-      'puppeteer-core': 'commonjs puppeteer-core'
-    });
-    return config;
-  }
+  // 1. Eliminamos el prefijo 'experimental' ya que es nativo en Next.js moderno
+  serverExternalPackages: ["puppeteer-core", "@sparticuz/chromium"],
+
+  // 2. Eliminamos completamente el bloque 'webpack'. 
+  // Al usar 'serverExternalPackages', Next.js ya sabe exactamente qué hacer detrás de escena.
 };
 
 module.exports = nextConfig;
