@@ -17,11 +17,13 @@ const nextConfig = {
     ]
   },
   experimental: {
-    serverComponentsExternalPackages: ["puppeteer", "@sparticuz/chromium"]
+    serverComponentsExternalPackages: ["puppeteer-core", "@sparticuz/chromium"]
   },
   webpack: (config) => {
+    config.externals = config.externals || [];
     config.externals.push({
-      '@sparticuz/chromium': 'commonjs @sparticuz/chromium'
+      '@sparticuz/chromium': 'commonjs @sparticuz/chromium',
+      'puppeteer-core': 'commonjs puppeteer-core'
     });
     return config;
   }
