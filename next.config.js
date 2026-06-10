@@ -18,6 +18,12 @@ const nextConfig = {
   },
   experimental: {
     serverComponentsExternalPackages: ["puppeteer", "@sparticuz/chromium"]
+  },
+  webpack: (config) => {
+    config.externals.push({
+      '@sparticuz/chromium': 'commonjs @sparticuz/chromium'
+    });
+    return config;
   }
 };
 
