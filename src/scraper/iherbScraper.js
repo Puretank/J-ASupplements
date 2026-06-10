@@ -1,4 +1,4 @@
-import puppeteer from "puppeteer";
+import puppeteer from "puppeteer-core";
 import * as cheerio from "cheerio";
 import chromium from "@sparticuz/chromium";
 
@@ -327,15 +327,18 @@ export async function scrapeIHerbProduct(url) {
   try {
     const isVercel = process.env.VERCEL === "1";
 
-    browser = await puppeteer.launch({
-      headless: true,
-      args: isVercel
-        ? chromium.args
-        : ["--no-sandbox", "--disable-setuid-sandbox"],
-      executablePath: isVercel
-        ? await chromium.executablePath()
-        : undefined
-    });
+    if (isVercel) {
+      browser = await puppeteer.launch({
+        args: chromium.args,
+        executablePath: await chromium.executablePath(),
+        headless: chromium.headless
+      });
+    } else {
+      browser = await puppeteer.launch({
+        headless: true,
+        args: ["--no-sandbox", "--disable-setuid-sandbox"]
+      });
+    }
 
     const page = await browser.newPage();
     await page.setUserAgent(
