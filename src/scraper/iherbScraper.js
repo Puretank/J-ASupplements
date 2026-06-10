@@ -1,5 +1,6 @@
 import puppeteer from "puppeteer";
 import * as cheerio from "cheerio";
+import chromium from "@sparticuz/chromium";
 
 const PROMO_KEYWORDS = [
   "sale",
@@ -324,9 +325,16 @@ export async function scrapeIHerbProduct(url) {
   let browser;
 
   try {
+    const isVercel = process.env.VERCEL === "1";
+
     browser = await puppeteer.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+      args: isVercel
+        ? chromium.args
+        : ["--no-sandbox", "--disable-setuid-sandbox"],
+      executablePath: isVercel
+        ? await chromium.executablePath()
+        : undefined
     });
 
     const page = await browser.newPage();
