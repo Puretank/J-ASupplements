@@ -1,4 +1,4 @@
-import puppeteer from "puppeteer-core";
+import puppeteer from "puppeteer";
 import * as cheerio from "cheerio";
 import chromium from "@sparticuz/chromium";
 

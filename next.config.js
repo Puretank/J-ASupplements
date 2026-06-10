@@ -18,7 +18,15 @@ const nextConfig = {
   },
   // Usamos el nombre antiguo/experimental que tu versión de Next.js reconoce
   experimental: {
-    serverComponentsExternalPackages: ["puppeteer-core", "@sparticuz/chromium"]
+    serverComponentsExternalPackages: ["puppeteer", "@sparticuz/chromium"]
+  },
+  webpack: (config) => {
+    config.externals = config.externals || [];
+    config.externals.push({
+      '@sparticuz/chromium': 'commonjs @sparticuz/chromium',
+      'puppeteer': 'commonjs puppeteer'
+    });
+    return config;
   }
 };
 
