@@ -229,14 +229,14 @@ export default function Home() {
                   👨 Julián
                 </button>
                 <button
-                  onClick={() => setSelectedContact("angie")}
+                  onClick={() => setSelectedContact("tatiana")}
                   className={`flex-1 rounded-lg px-4 py-2 font-semibold transition ${
-                    selectedContact === "angie"
+                    selectedContact === "tatiana"
                       ? "bg-brand-500 text-black"
                       : "bg-surface-600 text-white hover:bg-surface-500"
                   }`}
                 >
-                  👩 Angie
+                  👩 Tatiana
                 </button>
               </div>
               <button

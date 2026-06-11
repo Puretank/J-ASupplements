@@ -10,7 +10,7 @@ export async function GET() {
 
   if (error) {
     return Response.json({
-      settings: { trm: 4100, ganancia: 45000, whatsapp_phone: "573001112233", julian_phone: "573001112233", angie_phone: "573011111111" }
+      settings: { trm: 4100, ganancia: 45000, whatsapp_phone: "573001112233", julian_phone: "573001112233", tatiana_phone: "573011111111" }
     });
   }
 
@@ -34,8 +34,8 @@ export async function PUT(req) {
     if (body.julian_phone !== undefined) {
       updates.julian_phone = body.julian_phone;
     }
-    if (body.angie_phone !== undefined) {
-      updates.angie_phone = body.angie_phone;
+    if (body.tatiana_phone !== undefined) {
+      updates.tatiana_phone = body.tatiana_phone;
     }
 
     const { data, error } = await supabase

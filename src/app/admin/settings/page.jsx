@@ -90,7 +90,7 @@ export default function AdminSettingsPage() {
           </label>
           <div className="space-y-2 text-sm text-gray-400">
             <p><strong className="text-white">Julián:</strong> 3192572657</p>
-            <p><strong className="text-white">Angie:</strong> 3115630074</p>
+            <p><strong className="text-white">Tatiana:</strong> 3115630074</p>
           </div>
         </div>
 
