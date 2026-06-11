@@ -59,6 +59,15 @@ export async function PATCH(req, { params }) {
         body.ganancia ?? settings.ganancia
       );
       updates = { ...updates, ...pricing };
+    } else if (body.precio_cop !== undefined) {
+      // Al editar precio original, recalcular costo_real y utilidad
+      const precioOriginal = Math.round(body.precio_cop);
+      const costoReal = Math.round(precioOriginal * 0.8); // 20% descuento
+      const precioFinal = current.precio_final || (costoReal + settings.ganancia);
+      updates.precio_cop = precioOriginal;
+      updates.costo_real = costoReal;
+      updates.precio_final = precioFinal;
+      updates.utilidad = Math.round(precioFinal - costoReal);
     } else if (body.precio_final !== undefined) {
       // Al editar precio final, mantener costo_real y recalcular utilidad
       const costo = body.costo_real ?? current.costo_real ?? 0;
