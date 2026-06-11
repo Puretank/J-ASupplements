@@ -28,6 +28,7 @@ export default function Home() {
   const [categoria, setCategoria] = useState("all");
   const [marca, setMarca] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
+  const [selectedContact, setSelectedContact] = useState("julian");
   const { addToCart } = useCart();
 
   async function loadProducts() {
@@ -66,6 +67,13 @@ export default function Home() {
         return list;
     }
   }, [products, sortBy]);
+
+  function enviarMensajeWhatsApp() {
+    const phone = selectedContact === "julian" ? "573192572657" : "573115630074";
+    const mensaje = "Hola, no encontré el producto que buscaba en la tienda. ¿Me pueden ayudar a conseguirlo?";
+    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(mensaje)}`;
+    window.open(whatsappUrl, "_blank");
+  }
 
   return (
     <div className="min-h-screen">
@@ -196,6 +204,54 @@ export default function Home() {
             ))}
           </div>
         )}
+
+        <section className="mt-16 rounded-2xl border border-white/5 bg-surface-700 p-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex-1">
+              <h3 className="font-display text-2xl font-bold text-white">
+                ¿No encontraste lo que buscabas?
+              </h3>
+              <p className="mt-2 text-lg text-gray-300">
+                ¡No te preocupes! Tenemos un catálogo enorme esperándote. Escríbenos y pregúntanos por el producto que necesitas, ¡nosotros te lo conseguimos!
+              </p>
+            </div>
+            <div className="flex flex-col gap-4 lg:w-auto">
+              <p className="text-sm font-medium text-gray-400">¿A quién deseas contactar?</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setSelectedContact("julian")}
+                  className={`flex-1 rounded-lg px-4 py-2 font-semibold transition ${
+                    selectedContact === "julian"
+                      ? "bg-brand-500 text-black"
+                      : "bg-surface-600 text-white hover:bg-surface-500"
+                  }`}
+                >
+                  👨 Julián
+                </button>
+                <button
+                  onClick={() => setSelectedContact("angie")}
+                  className={`flex-1 rounded-lg px-4 py-2 font-semibold transition ${
+                    selectedContact === "angie"
+                      ? "bg-brand-500 text-black"
+                      : "bg-surface-600 text-white hover:bg-surface-500"
+                  }`}
+                >
+                  👩 Angie
+                </button>
+              </div>
+              <button
+                onClick={enviarMensajeWhatsApp}
+                className="flex items-center justify-center gap-2 rounded-xl bg-green-500 px-6 py-3 font-semibold text-black transition hover:bg-green-400"
+              >
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                  <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.555 4.126 1.528 5.867L0 24l6.335-1.662A11.954 11.954 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0z"/>
+                </svg>
+                Enviar WhatsApp
+              </button>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );
