@@ -197,7 +197,31 @@ export default function AdminProductsPage() {
                     </button>
                   )}
                 </td>
-                <td>{formatCOP(product.precio_cop || product.precio_final)}</td>
+                <td>
+                  {editing === `${product.id}-precio-original` ? (
+                    <input
+                      type="number"
+                      defaultValue={product.precio_cop || product.precio_final}
+                      className="admin-input w-28"
+                      onBlur={(e) =>
+                        updateProduct(product.id, {
+                          precio_cop: Number(e.target.value)
+                        })
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") e.target.blur();
+                      }}
+                      autoFocus
+                    />
+                  ) : (
+                    <button
+                      onClick={() => setEditing(`${product.id}-precio-original`)}
+                      className="text-gray-300 hover:underline"
+                    >
+                      {formatCOP(product.precio_cop || product.precio_final)}
+                    </button>
+                  )}
+                </td>
                 <td>{formatCOP(product.costo_real || product.precio_final)}</td>
                 <td>
                   {editing === `${product.id}-precio` ? (
