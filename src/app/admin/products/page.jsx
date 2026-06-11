@@ -7,7 +7,7 @@ const CATEGORIAS = [
   "Proteínas",
   "Creatina",
   "Aminoácidos",
-  "Pre-entreno",
+  "Pre-Entreno",
   "Ganadores de masa",
   "Quemadores de grasa",
   "Vitaminas",
@@ -25,6 +25,7 @@ export default function AdminProductsPage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
   const [selectedProducts, setSelectedProducts] = useState(new Set());
+  const [bulkCategory, setBulkCategory] = useState("");
 
   async function loadProducts() {
     const res = await fetch("/api/products?stats=true");
@@ -70,6 +71,28 @@ export default function AdminProductsPage() {
     setSelectedProducts(new Set());
   }
 
+  async function assignBulkCategory() {
+    if (selectedProducts.size === 0) return;
+    if (!bulkCategory) {
+      alert("Por favor selecciona una categoría");
+      return;
+    }
+
+    if (!confirm(`¿Asignar categoría "${bulkCategory}" a ${selectedProducts.size} productos seleccionados?`)) return;
+
+    for (const id of selectedProducts) {
+      await fetch(`/api/products/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ categoria: bulkCategory })
+      });
+    }
+
+    await loadProducts();
+    setSelectedProducts(new Set());
+    setBulkCategory("");
+  }
+
   function toggleProductSelection(id) {
     setSelectedProducts((prev) => {
       const newSet = new Set(prev);
@@ -104,12 +127,32 @@ export default function AdminProductsPage() {
           <p className="text-gray-400">{products.length} productos en catálogo</p>
         </div>
         {selectedProducts.size > 0 && (
-          <button
-            onClick={deleteSelectedProducts}
-            className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600"
-          >
-            Eliminar {selectedProducts.size} seleccionados
-          </button>
+          <div className="flex items-center gap-3">
+            <select
+              value={bulkCategory}
+              onChange={(e) => setBulkCategory(e.target.value)}
+              className="rounded-xl border border-white/10 bg-surface-700 px-4 py-2 text-sm text-white outline-none"
+            >
+              <option value="">Seleccionar categoría...</option>
+              {CATEGORIAS.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={assignBulkCategory}
+              className="rounded-xl bg-brand-500 px-4 py-2 text-sm font-semibold text-black transition hover:bg-brand-400"
+            >
+              Asignar categoría
+            </button>
+            <button
+              onClick={deleteSelectedProducts}
+              className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600"
+            >
+              Eliminar {selectedProducts.size} seleccionados
+            </button>
+          </div>
         )}
       </div>
 
