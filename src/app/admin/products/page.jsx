@@ -26,6 +26,8 @@ export default function AdminProductsPage() {
   const [editing, setEditing] = useState(null);
   const [selectedProducts, setSelectedProducts] = useState(new Set());
   const [bulkCategory, setBulkCategory] = useState("");
+  const [reimporting, setReimporting] = useState(false);
+  const [reimportProgress, setReimportProgress] = useState({ current: 0, total: 0 });
 
   async function loadProducts() {
     const res = await fetch("/api/products?stats=true");
@@ -93,6 +95,38 @@ export default function AdminProductsPage() {
     setBulkCategory("");
   }
 
+  async function reimportAllProducts() {
+    const productsWithUrls = products.filter(p => p.iherb_url);
+    if (productsWithUrls.length === 0) {
+      alert("No hay productos con URL de iHerb para reimportar");
+      return;
+    }
+
+    if (!confirm(`¿Reimportar ${productsWithUrls.length} productos para actualizar precios?`)) return;
+
+    setReimporting(true);
+    setReimportProgress({ current: 0, total: productsWithUrls.length });
+
+    for (let i = 0; i < productsWithUrls.length; i++) {
+      const product = productsWithUrls[i];
+      setReimportProgress({ current: i + 1, total: productsWithUrls.length });
+
+      try {
+        await fetch("/api/import-product", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: product.iherb_url })
+        });
+      } catch (e) {
+        console.error(`Error reimporting product ${product.id}:`, e);
+      }
+    }
+
+    await loadProducts();
+    setReimporting(false);
+    setReimportProgress({ current: 0, total: 0 });
+  }
+
   function toggleProductSelection(id) {
     setSelectedProducts((prev) => {
       const newSet = new Set(prev);
@@ -126,35 +160,61 @@ export default function AdminProductsPage() {
           </h1>
           <p className="text-gray-400">{products.length} productos en catálogo</p>
         </div>
-        {selectedProducts.size > 0 && (
-          <div className="flex items-center gap-3">
-            <select
-              value={bulkCategory}
-              onChange={(e) => setBulkCategory(e.target.value)}
-              className="rounded-xl border border-white/10 bg-surface-700 px-4 py-2 text-sm text-white outline-none"
-            >
-              <option value="">Seleccionar categoría...</option>
-              {CATEGORIAS.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={assignBulkCategory}
-              className="rounded-xl bg-brand-500 px-4 py-2 text-sm font-semibold text-black transition hover:bg-brand-400"
-            >
-              Asignar categoría
-            </button>
-            <button
-              onClick={deleteSelectedProducts}
-              className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600"
-            >
-              Eliminar {selectedProducts.size} seleccionados
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={reimportAllProducts}
+            disabled={reimporting}
+            className="rounded-xl bg-green-500 px-4 py-2 text-sm font-semibold text-black transition hover:bg-green-400 disabled:opacity-50"
+          >
+            {reimporting ? "Reimportando..." : "Reimportar todos"}
+          </button>
+          {selectedProducts.size > 0 && (
+            <>
+              <select
+                value={bulkCategory}
+                onChange={(e) => setBulkCategory(e.target.value)}
+                className="rounded-xl border border-white/10 bg-surface-700 px-4 py-2 text-sm text-white outline-none"
+              >
+                <option value="">Seleccionar categoría...</option>
+                {CATEGORIAS.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={assignBulkCategory}
+                className="rounded-xl bg-brand-500 px-4 py-2 text-sm font-semibold text-black transition hover:bg-brand-400"
+              >
+                Asignar categoría
+              </button>
+              <button
+                onClick={deleteSelectedProducts}
+                className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600"
+              >
+                Eliminar {selectedProducts.size} seleccionados
+              </button>
+            </>
+          )}
+        </div>
       </div>
+
+      {reimporting && reimportProgress.total > 0 && (
+        <div className="mb-4">
+          <div className="mb-2 flex items-center justify-between text-sm text-gray-400">
+            <span>Reimportando productos...</span>
+            <span>{reimportProgress.current} / {reimportProgress.total}</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-surface-700">
+            <div
+              className="h-full bg-green-500 transition-all"
+              style={{
+                width: `${(reimportProgress.current / reimportProgress.total) * 100}%`
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="overflow-x-auto rounded-2xl border border-white/5 bg-surface-800">
         <table className="admin-table">
@@ -203,10 +263,22 @@ export default function AdminProductsPage() {
                     <div className="h-10 w-10 rounded-lg bg-surface-600" />
                   )}
                 </td>
-                <td className="max-w-[200px]">
-                  <p className="truncate font-medium text-white">
-                    {product.nombre}
-                  </p>
+                <td className="max-w-[300px]">
+                  {product.iherb_url ? (
+                    <a
+                      href={product.iherb_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block truncate font-medium text-brand-400 hover:text-brand-300 hover:underline"
+                      title={product.nombre}
+                    >
+                      {product.nombre}
+                    </a>
+                  ) : (
+                    <p className="truncate font-medium text-white" title={product.nombre}>
+                      {product.nombre}
+                    </p>
+                  )}
                   {product.categoria && (
                     <p className="text-xs text-gray-500">{product.categoria}</p>
                   )}
