@@ -130,6 +130,7 @@ export async function POST(req) {
       marca: data.marca,
       imagen: data.imagen,
       imagenes: data.imagenes || null,
+      imagenes_seleccionadas: data.imagenes || null,
       precio_usd: pricing.precio_usd,
       precio_cop: pricing.precio_cop || 0,
       costo_real: pricing.costo_real || 0,

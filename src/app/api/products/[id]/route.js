@@ -89,6 +89,12 @@ export async function PATCH(req, { params }) {
     if (updates.categoria == null || updates.categoria === "") {
       delete updates.categoria;
     }
+    // Manejar imágenes seleccionadas
+    if (updates.imagenes_seleccionadas !== undefined) {
+      if (updates.imagenes_seleccionadas === null || updates.imagenes_seleccionadas.length === 0) {
+        delete updates.imagenes_seleccionadas;
+      }
+    }
 
     const data = await updateProductWithFallback(supabase, id, updates);
     return Response.json({ product: data });

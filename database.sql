@@ -61,6 +61,7 @@ alter table products add column if not exists tamano text;
 alter table products add column if not exists sabores text[];
 alter table products add column if not exists iherb_url text;
 alter table products add column if not exists imagenes text[];
+alter table products add column if not exists imagenes_seleccionadas text[];
 
 -- Pedidos
 create table if not exists orders (

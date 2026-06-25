@@ -28,6 +28,10 @@ export default function AdminProductsPage() {
   const [bulkCategory, setBulkCategory] = useState("");
   const [reimporting, setReimporting] = useState(false);
   const [reimportProgress, setReimportProgress] = useState({ current: 0, total: 0 });
+  const [imageEditor, setImageEditor] = useState(null);
+  const [imageWizard, setImageWizard] = useState(null);
+  const [wizardIndex, setWizardIndex] = useState(0);
+  const [wizardSelectedImages, setWizardSelectedImages] = useState(new Set());
 
   async function loadProducts() {
     const res = await fetch("/api/products?stats=true");
@@ -95,6 +99,59 @@ export default function AdminProductsPage() {
     setBulkCategory("");
   }
 
+  function startImageWizard() {
+    const productsWithImages = products.filter(p => p.imagenes && p.imagenes.length > 0);
+    if (productsWithImages.length === 0) {
+      alert("No hay productos con imágenes para editar");
+      return;
+    }
+    setImageWizard(productsWithImages);
+    setWizardIndex(0);
+    setWizardSelectedImages(new Set(productsWithImages[0].imagenes_seleccionadas || productsWithImages[0].imagenes || []));
+  }
+
+  async function saveWizardProduct() {
+    const currentProduct = imageWizard[wizardIndex];
+    try {
+      await fetch(`/api/products/${currentProduct.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imagenes_seleccionadas: Array.from(wizardSelectedImages)
+        })
+      });
+    } catch (e) {
+      console.error("Error al guardar imágenes:", e);
+    }
+  }
+
+  async function nextWizardProduct() {
+    await saveWizardProduct();
+    if (wizardIndex < imageWizard.length - 1) {
+      const nextProduct = imageWizard[wizardIndex + 1];
+      setWizardIndex(wizardIndex + 1);
+      setWizardSelectedImages(new Set(nextProduct.imagenes_seleccionadas || nextProduct.imagenes || []));
+    } else {
+      await loadProducts();
+      setImageWizard(null);
+      setWizardIndex(0);
+      alert("¡Todos los productos han sido procesados!");
+    }
+  }
+
+  async function skipWizardProduct() {
+    if (wizardIndex < imageWizard.length - 1) {
+      const nextProduct = imageWizard[wizardIndex + 1];
+      setWizardIndex(wizardIndex + 1);
+      setWizardSelectedImages(new Set(nextProduct.imagenes_seleccionadas || nextProduct.imagenes || []));
+    } else {
+      await loadProducts();
+      setImageWizard(null);
+      setWizardIndex(0);
+      alert("¡Todos los productos han sido procesados!");
+    }
+  }
+
   async function reimportAllProducts() {
     const productsWithUrls = products.filter(p => p.iherb_url);
     if (productsWithUrls.length === 0) {
@@ -102,7 +159,7 @@ export default function AdminProductsPage() {
       return;
     }
 
-    if (!confirm(`¿Reimportar ${productsWithUrls.length} productos para actualizar precios?`)) return;
+    if (!confirm(`¿Reimportar ${productsWithUrls.length} productos para actualizar precios? (Se mantendrán las imágenes seleccionadas y categorías)`)) return;
 
     setReimporting(true);
     setReimportProgress({ current: 0, total: productsWithUrls.length });
@@ -112,11 +169,31 @@ export default function AdminProductsPage() {
       setReimportProgress({ current: i + 1, total: productsWithUrls.length });
 
       try {
-        await fetch("/api/import-product", {
+        const res = await fetch("/api/import-product", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ url: product.iherb_url })
         });
+        const data = await res.json();
+
+        // Si el producto se importó correctamente, restaurar las imágenes seleccionadas y categoría
+        if (data.product) {
+          const updates = {};
+          if (product.imagenes_seleccionadas) {
+            updates.imagenes_seleccionadas = product.imagenes_seleccionadas;
+          }
+          if (product.categoria) {
+            updates.categoria = product.categoria;
+          }
+
+          if (Object.keys(updates).length > 0) {
+            await fetch(`/api/products/${data.product.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(updates)
+            });
+          }
+        }
       } catch (e) {
         console.error(`Error reimporting product ${product.id}:`, e);
       }
@@ -161,6 +238,12 @@ export default function AdminProductsPage() {
           <p className="text-gray-400">{products.length} productos en catálogo</p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={startImageWizard}
+            className="rounded-xl bg-brand-500 px-4 py-2 text-sm font-semibold text-black transition hover:bg-brand-400"
+          >
+            Seleccionar imágenes
+          </button>
           <button
             onClick={reimportAllProducts}
             disabled={reimporting}
@@ -427,12 +510,22 @@ export default function AdminProductsPage() {
                   )}
                 </td>
                 <td>
-                  <button
-                    onClick={() => deleteProduct(product.id)}
-                    className="admin-btn-danger text-xs"
-                  >
-                    Eliminar
-                  </button>
+                  <div className="flex gap-2">
+                    {product.imagenes && product.imagenes.length > 0 && (
+                      <button
+                        onClick={() => setImageEditor(product)}
+                        className="admin-btn text-xs"
+                      >
+                        Imágenes
+                      </button>
+                    )}
+                    <button
+                      onClick={() => deleteProduct(product.id)}
+                      className="admin-btn-danger text-xs"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -445,6 +538,262 @@ export default function AdminProductsPage() {
           </p>
         )}
       </div>
+
+      {/* Modal para editar imágenes */}
+      {imageEditor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="max-w-4xl w-full mx-4 rounded-2xl border border-white/5 bg-surface-800 p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="font-display text-xl font-bold text-white">
+                Editar imágenes - {imageEditor.nombre}
+              </h3>
+              <button
+                onClick={() => setImageEditor(null)}
+                className="text-gray-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="mb-4 text-sm text-gray-300">
+              Selecciona las imágenes a mostrar ({imageEditor.imagenes_seleccionadas?.length || 0} seleccionadas)
+            </p>
+
+            <div className="grid grid-cols-4 gap-3 max-h-96 overflow-y-auto">
+              {imageEditor.imagenes?.map((img, idx) => (
+                <div
+                  key={idx}
+                  className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition ${
+                    imageEditor.imagenes_seleccionadas?.includes(img)
+                      ? "border-brand-500"
+                      : "border-transparent hover:border-white/20"
+                  }`}
+                  onClick={() => {
+                    setImageEditor((prev) => {
+                      const selected = prev.imagenes_seleccionadas || [];
+                      const newSelected = selected.includes(img)
+                        ? selected.filter((i) => i !== img)
+                        : [...selected, img];
+                      return { ...prev, imagenes_seleccionadas: newSelected };
+                    });
+                  }}
+                >
+                  <img
+                    src={img}
+                    alt={`Imagen ${idx + 1}`}
+                    className="h-24 w-full object-contain bg-surface-600"
+                  />
+                  {imageEditor.imagenes_seleccionadas?.includes(img) && (
+                    <div className="absolute top-1 right-1 rounded-full bg-brand-500 p-1">
+                      <svg className="h-3 w-3 text-black" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2 items-center">
+              <button
+                onClick={() => setImageEditor((prev) => ({ ...prev, imagenes_seleccionadas: prev.imagenes || [] }))}
+                className="text-xs text-brand-400 hover:text-brand-300"
+              >
+                Seleccionar todas
+              </button>
+              <button
+                onClick={() => setImageEditor((prev) => ({ ...prev, imagenes_seleccionadas: [] }))}
+                className="text-xs text-gray-400 hover:text-white"
+              >
+                Deseleccionar todas
+              </button>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  max={imageEditor.imagenes?.length || 0}
+                  placeholder="N"
+                  className="w-12 rounded-lg border border-white/10 bg-surface-700 px-2 py-1 text-center text-xs text-white outline-none"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      const n = parseInt(e.target.value);
+                      if (n > 0 && n <= (imageEditor.imagenes?.length || 0)) {
+                        setImageEditor((prev) => ({ ...prev, imagenes_seleccionadas: prev.imagenes?.slice(0, n) || [] }));
+                      }
+                    }
+                  }}
+                />
+                <button
+                  onClick={(e) => {
+                    const input = e.target.previousElementSibling;
+                    const n = parseInt(input.value);
+                    if (n > 0 && n <= (imageEditor.imagenes?.length || 0)) {
+                      setImageEditor((prev) => ({ ...prev, imagenes_seleccionadas: prev.imagenes?.slice(0, n) || [] }));
+                    }
+                  }}
+                  className="text-xs text-gray-400 hover:text-white"
+                >
+                  Primeras N
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setImageEditor(null)}
+                className="rounded-xl border border-white/10 bg-surface-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-surface-600"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    await fetch(`/api/products/${imageEditor.id}`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        imagenes_seleccionadas: imageEditor.imagenes_seleccionadas
+                      })
+                    });
+                    await loadProducts();
+                    setImageEditor(null);
+                  } catch (e) {
+                    alert("Error al guardar imágenes");
+                  }
+                }}
+                className="rounded-xl bg-brand-500 px-4 py-2 text-sm font-semibold text-black transition hover:bg-brand-400"
+              >
+                Guardar cambios
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Wizard para seleccionar imágenes secuencialmente */}
+      {imageWizard && imageWizard[wizardIndex] && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="max-w-5xl w-full mx-4 rounded-2xl border border-white/5 bg-surface-800 p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="font-display text-xl font-bold text-white">
+                  Seleccionar imágenes - Producto {wizardIndex + 1} de {imageWizard.length}
+                </h3>
+                <p className="text-sm text-gray-400">{imageWizard[wizardIndex].nombre}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setImageWizard(null);
+                  setWizardIndex(0);
+                }}
+                className="text-gray-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="mb-4 text-sm text-gray-300">
+              Selecciona las imágenes a mostrar ({wizardSelectedImages.size} seleccionadas)
+            </p>
+
+            <div className="grid grid-cols-4 gap-3 max-h-96 overflow-y-auto">
+              {imageWizard[wizardIndex].imagenes?.map((img, idx) => (
+                <div
+                  key={idx}
+                  className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition ${
+                    wizardSelectedImages.has(img)
+                      ? "border-brand-500"
+                      : "border-transparent hover:border-white/20"
+                  }`}
+                  onClick={() => {
+                    setWizardSelectedImages((prev) => {
+                      const newSet = new Set(prev);
+                      if (newSet.has(img)) {
+                        newSet.delete(img);
+                      } else {
+                        newSet.add(img);
+                      }
+                      return newSet;
+                    });
+                  }}
+                >
+                  <img
+                    src={img}
+                    alt={`Imagen ${idx + 1}`}
+                    className="h-24 w-full object-contain bg-surface-600"
+                  />
+                  {wizardSelectedImages.has(img) && (
+                    <div className="absolute top-1 right-1 rounded-full bg-brand-500 p-1">
+                      <svg className="h-3 w-3 text-black" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2 items-center">
+              <button
+                onClick={() => setWizardSelectedImages(new Set(imageWizard[wizardIndex].imagenes || []))}
+                className="text-xs text-brand-400 hover:text-brand-300"
+              >
+                Seleccionar todas
+              </button>
+              <button
+                onClick={() => setWizardSelectedImages(new Set())}
+                className="text-xs text-gray-400 hover:text-white"
+              >
+                Deseleccionar todas
+              </button>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  max={imageWizard[wizardIndex].imagenes?.length || 0}
+                  placeholder="N"
+                  className="w-12 rounded-lg border border-white/10 bg-surface-700 px-2 py-1 text-center text-xs text-white outline-none"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      const n = parseInt(e.target.value);
+                      if (n > 0 && n <= (imageWizard[wizardIndex].imagenes?.length || 0)) {
+                        setWizardSelectedImages(new Set(imageWizard[wizardIndex].imagenes?.slice(0, n) || []));
+                      }
+                    }
+                  }}
+                />
+                <button
+                  onClick={(e) => {
+                    const input = e.target.previousElementSibling;
+                    const n = parseInt(input.value);
+                    if (n > 0 && n <= (imageWizard[wizardIndex].imagenes?.length || 0)) {
+                      setWizardSelectedImages(new Set(imageWizard[wizardIndex].imagenes?.slice(0, n) || []));
+                    }
+                  }}
+                  className="text-xs text-gray-400 hover:text-white"
+                >
+                  Primeras N
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-between">
+              <button
+                onClick={skipWizardProduct}
+                className="rounded-xl border border-white/10 bg-surface-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-surface-600"
+              >
+                Saltar
+              </button>
+              <button
+                onClick={nextWizardProduct}
+                className="rounded-xl bg-brand-500 px-4 py-2 text-sm font-semibold text-black transition hover:bg-brand-400"
+              >
+                {wizardIndex === imageWizard.length - 1 ? "Finalizar" : "Siguiente"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

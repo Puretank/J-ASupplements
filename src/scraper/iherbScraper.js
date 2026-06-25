@@ -225,11 +225,14 @@ async function extractImages($, jsonLdProduct) {
 
   // Usa extractImage para obtener la imagen principal
   const mainImage = extractImage($, jsonLdProduct);
-  if (mainImage && mainImage.length > 10) {
-    images.push(mainImage);
+  // Solo agregar si es de alta calidad (images-iherb.com) y usar /l/ siempre
+  if (mainImage && mainImage.length > 10 && mainImage.includes("images-iherb.com")) {
+    // Reemplazar /r/ o /g/ con /l/ para asegurar alta calidad
+    const highQualityMain = mainImage.replace(/\/[gr]\//g, "/l/");
+    images.push(highQualityMain);
   }
 
-  // Si tenemos la imagen principal y tiene el patrón de iHerb, genera la segunda imagen
+  // Si tenemos la imagen principal y tiene el patrón de iHerb, genera todas las imágenes disponibles
   if (images.length === 1) {
     const mainImage = images[0];
     // Patrón: /g/8.jpg → /l/13.jpg o /l/8.jpg → /l/13.jpg (incrementa el número en 5 o 6)
@@ -237,27 +240,56 @@ async function extractImages($, jsonLdProduct) {
     if (match) {
       const currentNumber = parseInt(match[1]);
 
-      // Intenta sumar 5 primero
-      let nextNumber = currentNumber + 5;
-      let secondImage = mainImage.replace(/\/[gl]\/\d+\.jpg/, `/l/${nextNumber}.jpg`);
+      // Intenta generar múltiples imágenes incrementando el número
+      // iHerb normalmente tiene imágenes en secuencia
+      for (let i = 1; i <= 15; i++) {
+        // Intenta con +5 y +6 alternativamente
+        const increment = i % 2 === 0 ? 6 : 5;
+        const nextNumber = currentNumber + (i * increment);
+        const nextImage = mainImage.replace(/\/[gl]\/\d+\.jpg/, `/l/${nextNumber}.jpg`);
 
-      // Verifica si la imagen existe
-      const exists = await checkImageExists(secondImage);
-      if (exists) {
-        images.push(secondImage);
-      } else {
-        // Si no existe, intenta sumar 6
-        nextNumber = currentNumber + 6;
-        secondImage = mainImage.replace(/\/[gl]\/\d+\.jpg/, `/l/${nextNumber}.jpg`);
-        const exists6 = await checkImageExists(secondImage);
-        if (exists6) {
-          images.push(secondImage);
+        // Verifica si la imagen existe y es de alta calidad
+        const exists = await checkImageExists(nextImage);
+        if (exists && nextImage.includes("images-iherb.com") && !images.includes(nextImage)) {
+          images.push(nextImage);
+        } else {
+          // Si una imagen no existe, intentamos con el siguiente patrón
+          const altNumber = currentNumber + (i * (increment === 5 ? 6 : 5));
+          const altImage = mainImage.replace(/\/[gl]\/\d+\.jpg/, `/l/${altNumber}.jpg`);
+          const altExists = await checkImageExists(altImage);
+          if (altExists && altImage.includes("images-iherb.com") && !images.includes(altImage)) {
+            images.push(altImage);
+          }
         }
       }
     }
   }
 
-  return images.slice(0, 2); // Devuelve máximo 2
+  // También intenta buscar imágenes en la galería del producto
+  const gallerySelectors = [
+    '[data-testid="product-gallery"] img',
+    '[class*="gallery"] img',
+    '[class*="thumbnail"] img',
+    '[class*="product-image"] img'
+  ];
+
+  for (const selector of gallerySelectors) {
+    $(selector).each((_, el) => {
+      const src = $(el).attr("src") || $(el).attr("data-src");
+      if (src && src.length > 10 && !src.includes("placeholder") && !src.startsWith("data:")) {
+        const fullSrc = src.startsWith("//") ? `https:${src}` : src;
+        // Reemplaza /r/ y /g/ con /l/ para mejor calidad
+        const highQualitySrc = fullSrc.replace(/\/[gr]\//g, "/l/");
+        // Solo agregar si es de alta calidad (images-iherb.com)
+        if (highQualitySrc.includes("images-iherb.com") && !images.includes(highQualitySrc)) {
+          images.push(highQualitySrc);
+        }
+      }
+    });
+  }
+
+  // Eliminar duplicados y devolver todas las imágenes encontradas
+  return [...new Set(images)];
 }
 
 function extractSize($, jsonLdProduct) {

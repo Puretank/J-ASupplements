@@ -28,6 +28,7 @@ export default function AdminImportPage() {
   const [error, setError] = useState("");
   const [importResults, setImportResults] = useState([]);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
+  const [selectedImages, setSelectedImages] = useState(new Set());
 
   async function guardarProducto() {
     if (!result) return;
@@ -42,6 +43,10 @@ export default function AdminImportPage() {
       payload.categoria = categoria;
     } else {
       delete payload.categoria;
+    }
+    // Incluir las imágenes seleccionadas
+    if (selectedImages.size > 0) {
+      payload.imagenes_seleccionadas = Array.from(selectedImages);
     }
     delete payload._saved;
     delete payload._existingId;
@@ -85,6 +90,7 @@ export default function AdminImportPage() {
     setLoading(true);
     setError("");
     setResult(null);
+    setSelectedImages(new Set());
 
     try {
       const res = await fetch("/api/import-product", {
@@ -105,6 +111,10 @@ export default function AdminImportPage() {
           setResult({ ...data.product, _saved: true });
         }
         setCategoria(data.product?.categoria || "");
+        // Seleccionar todas las imágenes por defecto
+        if (data.product?.imagenes) {
+          setSelectedImages(new Set(data.product.imagenes));
+        }
         setUrl("");
       }
     } catch {
@@ -236,90 +246,209 @@ export default function AdminImportPage() {
                     {typeof result.utilidad === "number" ? formatCOP(result.utilidad) : "-"}
                   </span>
                 </p>
-                {result._saved === false && (
-                  <div className="mt-2 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <span className="inline-block rounded-full bg-yellow-500/10 px-2 py-0.5 text-xs text-yellow-400">
-                        Promo: Pendiente
-                      </span>
-                      <button
-                        onClick={guardarProducto}
-                        disabled={loading}
-                        className="admin-btn text-xs disabled:opacity-50"
-                      >
-                        Guardar producto
-                      </button>
-                      {result._existingId && (
-                        <span className="text-sm text-gray-400">Producto existente: {result._existingId}</span>
-                      )}
-                    </div>
-                    <label className="text-sm text-gray-300">
-                      Categoría opcional
-                    </label>
-                    <select
-                      value={categoria}
-                      onChange={(e) => setCategoria(e.target.value)}
-                      className="w-full rounded-xl border border-white/10 bg-surface-700 px-3 py-2 text-sm text-white outline-none"
-                    >
-                      {CATEGORIES.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat || "Sin categoría"}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-                {result._saved === true && (
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className="inline-block rounded-full bg-green-500/10 px-2 py-0.5 text-xs text-green-400">
-                      Guardado
-                    </span>
-                    <button
-                      onClick={async () => {
-                        setLoading(true);
-                        try {
-                          const res = await fetch(`/api/products/${result.id}`, {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ tiene_promocion: true })
-                          });
-                          const data = await res.json();
-                          if (data.product) setResult({ ...data.product, _saved: true });
-                        } catch (e) {
-                          setError("Error al marcar promoción");
-                        } finally {
-                          setLoading(false);
-                        }
-                      }}
-                      className="admin-btn text-xs disabled:opacity-50"
-                    >
-                      Marcar Sí
-                    </button>
-                    <button
-                      onClick={async () => {
-                        setLoading(true);
-                        try {
-                          const res = await fetch(`/api/products/${result.id}`, {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ tiene_promocion: false })
-                          });
-                          const data = await res.json();
-                          if (data.product) setResult({ ...data.product, _saved: true });
-                        } catch (e) {
-                          setError("Error al marcar promoción");
-                        } finally {
-                          setLoading(false);
-                        }
-                      }}
-                      className="admin-btn-danger text-xs disabled:opacity-50"
-                    >
-                      Marcar No
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
+
+            {/* Selector de imágenes */}
+            {result.imagenes && result.imagenes.length > 0 && (
+              <div className="mt-4">
+                <p className="mb-2 text-sm font-medium text-gray-300">
+                  Selecciona las imágenes a mostrar ({selectedImages.size} seleccionadas)
+                </p>
+                <div className="grid grid-cols-4 gap-2">
+                  {result.imagenes.map((img, idx) => (
+                    <div
+                      key={idx}
+                      className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition ${
+                        selectedImages.has(img)
+                          ? "border-brand-500"
+                          : "border-transparent hover:border-white/20"
+                      }`}
+                      onClick={() => {
+                        setSelectedImages((prev) => {
+                          const newSet = new Set(prev);
+                          if (newSet.has(img)) {
+                            newSet.delete(img);
+                          } else {
+                            newSet.add(img);
+                          }
+                          return newSet;
+                        });
+                      }}
+                    >
+                      <img
+                        src={img}
+                        alt={`Imagen ${idx + 1}`}
+                        className="h-24 w-full object-contain bg-surface-600"
+                      />
+                      {selectedImages.has(img) && (
+                        <div className="absolute top-1 right-1 rounded-full bg-brand-500 p-1">
+                          <svg className="h-3 w-3 text-black" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2 items-center">
+                  <button
+                    onClick={() => setSelectedImages(new Set(result.imagenes))}
+                    className="text-xs text-brand-400 hover:text-brand-300"
+                  >
+                    Seleccionar todas
+                  </button>
+                  <button
+                    onClick={() => setSelectedImages(new Set())}
+                    className="text-xs text-gray-400 hover:text-white"
+                  >
+                    Deseleccionar todas
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="1"
+                      max={result.imagenes.length}
+                      placeholder="N"
+                      className="w-12 rounded-lg border border-white/10 bg-surface-700 px-2 py-1 text-center text-xs text-white outline-none"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          const n = parseInt(e.target.value);
+                          if (n > 0 && n <= result.imagenes.length) {
+                            setSelectedImages(new Set(result.imagenes.slice(0, n)));
+                          }
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={(e) => {
+                        const input = e.target.previousElementSibling;
+                        const n = parseInt(input.value);
+                        if (n > 0 && n <= result.imagenes.length) {
+                          setSelectedImages(new Set(result.imagenes.slice(0, n)));
+                        }
+                      }}
+                      className="text-xs text-gray-400 hover:text-white"
+                    >
+                      Primeras N
+                    </button>
+                  </div>
+                  {result._saved === true && (
+                    <button
+                      onClick={async () => {
+                        setLoading(true);
+                        try {
+                          const res = await fetch(`/api/products/${result.id}`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              imagenes_seleccionadas: Array.from(selectedImages)
+                            })
+                          });
+                          const data = await res.json();
+                          if (data.product) {
+                            setResult({ ...data.product, _saved: true });
+                            alert("Imágenes actualizadas correctamente");
+                          }
+                        } catch (e) {
+                          setError("Error al actualizar imágenes");
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                      disabled={loading}
+                      className="admin-btn text-xs disabled:opacity-50"
+                    >
+                      {loading ? "Guardando..." : "Guardar selección"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {result._saved === false && (
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="inline-block rounded-full bg-yellow-500/10 px-2 py-0.5 text-xs text-yellow-400">
+                    Promo: Pendiente
+                  </span>
+                  <button
+                    onClick={guardarProducto}
+                    disabled={loading}
+                    className="admin-btn text-xs disabled:opacity-50"
+                  >
+                    Guardar producto
+                  </button>
+                  {result._existingId && (
+                    <span className="text-sm text-gray-400">Producto existente: {result._existingId}</span>
+                  )}
+                </div>
+                <label className="text-sm text-gray-300">
+                  Categoría opcional
+                </label>
+                <select
+                  value={categoria}
+                  onChange={(e) => setCategoria(e.target.value)}
+                  className="w-full rounded-xl border border-white/10 bg-surface-700 px-3 py-2 text-sm text-white outline-none"
+                >
+                  {CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat || "Sin categoría"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {result._saved === true && (
+              <div className="mt-2 flex items-center gap-2">
+                <span className="inline-block rounded-full bg-green-500/10 px-2 py-0.5 text-xs text-green-400">
+                  Guardado
+                </span>
+                <button
+                  onClick={async () => {
+                    setLoading(true);
+                    try {
+                      const res = await fetch(`/api/products/${result.id}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ tiene_promocion: true })
+                      });
+                      const data = await res.json();
+                      if (data.product) setResult({ ...data.product, _saved: true });
+                    } catch (e) {
+                      setError("Error al marcar promoción");
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  className="admin-btn text-xs disabled:opacity-50"
+                >
+                  Marcar Sí
+                </button>
+                <button
+                  onClick={async () => {
+                    setLoading(true);
+                    try {
+                      const res = await fetch(`/api/products/${result.id}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ tiene_promocion: false })
+                      });
+                      const data = await res.json();
+                      if (data.product) setResult({ ...data.product, _saved: true });
+                    } catch (e) {
+                      setError("Error al marcar promoción");
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  className="admin-btn-danger text-xs disabled:opacity-50"
+                >
+                  Marcar No
+                </button>
+              </div>
+            )}
           </div>
         )}
 

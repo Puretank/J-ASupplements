@@ -7,8 +7,10 @@ export default function ProductCard({ product, onAddToCart }) {
   const [imageIndex, setImageIndex] = useState(0);
   const [isZoomed, setIsZoomed] = useState(false);
 
-  // Usa array de imagenes si existe, sino intenta usar imagen sola
-  const images = product.imagenes && product.imagenes.length > 0
+  // Usa imágenes seleccionadas si existen, sino usa todas las imágenes, sino intenta usar imagen sola
+  const images = product.imagenes_seleccionadas && product.imagenes_seleccionadas.length > 0
+    ? product.imagenes_seleccionadas
+    : product.imagenes && product.imagenes.length > 0
     ? product.imagenes
     : product.imagen
     ? [product.imagen]
