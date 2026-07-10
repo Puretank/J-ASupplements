@@ -6,7 +6,8 @@ import ProductCard from "../components/products/ProductCard";
 
 const CATEGORIAS = [
   "all",
-  "Proteínas",
+  "Proteína limpia",
+  "Hipercalórica",
   "Creatina",
   "Vitaminas",
   "Omega-3",

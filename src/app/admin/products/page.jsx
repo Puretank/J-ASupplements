@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { formatCOP } from "../../../lib/format";
 
 const CATEGORIAS = [
-  "Proteínas",
+  "Proteína limpia",
+  "Hipercalórica",
   "Creatina",
   "Aminoácidos",
   "Pre-Entreno",
@@ -204,6 +205,59 @@ export default function AdminProductsPage() {
     setReimportProgress({ current: 0, total: 0 });
   }
 
+  async function reimportSelectedProducts() {
+    const selectedProductsList = Array.from(selectedProducts).map(id => products.find(p => p.id === id)).filter(p => p && p.iherb_url);
+    if (selectedProductsList.length === 0) {
+      alert("No hay productos seleccionados con URL de iHerb para reimportar");
+      return;
+    }
+
+    if (!confirm(`¿Reimportar ${selectedProductsList.length} productos seleccionados para actualizar precios? (Se mantendrán las imágenes seleccionadas y categorías)`)) return;
+
+    setReimporting(true);
+    setReimportProgress({ current: 0, total: selectedProductsList.length });
+
+    for (let i = 0; i < selectedProductsList.length; i++) {
+      const product = selectedProductsList[i];
+      setReimportProgress({ current: i + 1, total: selectedProductsList.length });
+
+      try {
+        const res = await fetch("/api/import-product", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: product.iherb_url })
+        });
+        const data = await res.json();
+
+        // Si el producto se importó correctamente, restaurar las imágenes seleccionadas y categoría
+        if (data.product) {
+          const updates = {};
+          if (product.imagenes_seleccionadas) {
+            updates.imagenes_seleccionadas = product.imagenes_seleccionadas;
+          }
+          if (product.categoria) {
+            updates.categoria = product.categoria;
+          }
+
+          if (Object.keys(updates).length > 0) {
+            await fetch(`/api/products/${data.product.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(updates)
+            });
+          }
+        }
+      } catch (e) {
+        console.error(`Error reimporting product ${product.id}:`, e);
+      }
+    }
+
+    await loadProducts();
+    setSelectedProducts(new Set());
+    setReimporting(false);
+    setReimportProgress({ current: 0, total: 0 });
+  }
+
   function toggleProductSelection(id) {
     setSelectedProducts((prev) => {
       const newSet = new Set(prev);
@@ -251,6 +305,15 @@ export default function AdminProductsPage() {
           >
             {reimporting ? "Reimportando..." : "Reimportar todos"}
           </button>
+          {selectedProducts.size > 0 && (
+            <button
+              onClick={reimportSelectedProducts}
+              disabled={reimporting}
+              className="rounded-xl bg-blue-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-400 disabled:opacity-50"
+            >
+              {reimporting ? "Reimportando..." : `Reimportar ${selectedProducts.size} seleccionados`}
+            </button>
+          )}
           {selectedProducts.size > 0 && (
             <>
               <select
