@@ -171,13 +171,16 @@ export default function AdminProductsPage() {
         body: JSON.stringify({ maintenance_mode: newMode })
       });
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Error en la respuesta del servidor");
+      }
       if (data.settings) {
         setMaintenanceMode(data.settings.maintenance_mode);
         alert(data.settings.maintenance_mode ? "Modo mantenimiento activado" : "Modo mantenimiento desactivado");
       }
     } catch (e) {
       console.error("Error toggling maintenance mode:", e);
-      alert("Error al cambiar modo de mantenimiento");
+      alert(`Error al cambiar modo de mantenimiento: ${e.message}`);
     } finally {
       setLoadingMaintenance(false);
     }
