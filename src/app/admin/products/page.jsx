@@ -5,18 +5,13 @@ import { formatCOP } from "../../../lib/format";
 
 const CATEGORIAS = [
   "Proteína limpia",
-  "Hipercalórica",
-  "Creatina",
+  "Proteína Hipercalórica",
+  "Vitaminas, Minerales Y Antioxidantes",
+  "Hidratantes y Electrolitos",
   "Pre-Entreno",
-  "Ganadores de masa",
-  "Quemadores de grasa",
-  "Vitaminas y Minerales",
+  "Creatina",
   "Omega-3",
-  "Colágeno",
-  "Proteína de suero",
-  "Proteína vegetal",
-  "Barras proteicas",
-  "Suplementos"
+  "Colágeno Y Resveratrol"
 ];
 
 export default function AdminProductsPage() {
@@ -31,6 +26,7 @@ export default function AdminProductsPage() {
   const [imageWizard, setImageWizard] = useState(null);
   const [wizardIndex, setWizardIndex] = useState(0);
   const [wizardSelectedImages, setWizardSelectedImages] = useState(new Set());
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
 
   async function loadProducts() {
     const res = await fetch("/api/products?stats=true");
@@ -41,6 +37,11 @@ export default function AdminProductsPage() {
 
   useEffect(() => {
     loadProducts();
+    // Cargar estado de mantenimiento desde localStorage
+    const savedMaintenanceMode = localStorage.getItem("maintenanceMode");
+    if (savedMaintenanceMode) {
+      setMaintenanceMode(JSON.parse(savedMaintenanceMode));
+    }
   }, []);
 
   async function updateProduct(id, updates) {
@@ -149,6 +150,13 @@ export default function AdminProductsPage() {
       setWizardIndex(0);
       alert("¡Todos los productos han sido procesados!");
     }
+  }
+
+  function toggleMaintenanceMode() {
+    const newMode = !maintenanceMode;
+    setMaintenanceMode(newMode);
+    localStorage.setItem("maintenanceMode", JSON.stringify(newMode));
+    alert(newMode ? "Modo mantenimiento activado" : "Modo mantenimiento desactivado");
   }
 
   async function reimportAllProducts() {
@@ -302,6 +310,16 @@ export default function AdminProductsPage() {
             className="rounded-xl bg-green-500 px-4 py-2 text-sm font-semibold text-black transition hover:bg-green-400 disabled:opacity-50"
           >
             {reimporting ? "Reimportando..." : "Reimportar todos"}
+          </button>
+          <button
+            onClick={toggleMaintenanceMode}
+            className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+              maintenanceMode
+                ? "bg-red-500 text-white hover:bg-red-400"
+                : "bg-gray-500 text-white hover:bg-gray-400"
+            }`}
+          >
+            {maintenanceMode ? "Desactivar mantenimiento" : "Activar mantenimiento"}
           </button>
           {selectedProducts.size > 0 && (
             <button
