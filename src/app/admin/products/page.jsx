@@ -11,7 +11,8 @@ const CATEGORIAS = [
   "Pre-Entreno",
   "Creatina",
   "Omega-3",
-  "Colágeno Y Resveratrol"
+  "Colágeno Y Resveratrol",
+  "Salud Intestinal"
 ];
 
 export default function AdminProductsPage() {

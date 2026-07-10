@@ -14,8 +14,7 @@ const CATEGORIAS = [
   "Creatina",
   "Omega-3",
   "Colágeno Y Resveratrol",
-  "Salud Intestinal",
-  "Salud Del Sueño",
+  "Salud Intestinal"
 ];
 
 export default function Home() {
