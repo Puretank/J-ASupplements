@@ -3,7 +3,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useCart } from "../context/CartContext";
 import ProductCard from "../components/products/ProductCard";
-import { useRouter } from "next/navigation";
 
 const CATEGORIAS = [
   "all",
@@ -18,7 +17,6 @@ const CATEGORIAS = [
 ];
 
 export default function Home() {
-  const router = useRouter();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -27,14 +25,6 @@ export default function Home() {
   const [sortBy, setSortBy] = useState("newest");
   const [selectedContact, setSelectedContact] = useState("julian");
   const { addToCart } = useCart();
-
-  // Verificar modo mantenimiento
-  useEffect(() => {
-    const maintenanceMode = localStorage.getItem("maintenanceMode");
-    if (maintenanceMode === "true") {
-      router.push("/maintenance");
-    }
-  }, [router]);
 
   async function loadProducts() {
     setLoading(true);

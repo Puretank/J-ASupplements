@@ -27,6 +27,7 @@ export default function AdminProductsPage() {
   const [wizardIndex, setWizardIndex] = useState(0);
   const [wizardSelectedImages, setWizardSelectedImages] = useState(new Set());
   const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [loadingMaintenance, setLoadingMaintenance] = useState(false);
 
   async function loadProducts() {
     const res = await fetch("/api/products?stats=true");
@@ -37,11 +38,19 @@ export default function AdminProductsPage() {
 
   useEffect(() => {
     loadProducts();
-    // Cargar estado de mantenimiento desde localStorage
-    const savedMaintenanceMode = localStorage.getItem("maintenanceMode");
-    if (savedMaintenanceMode) {
-      setMaintenanceMode(JSON.parse(savedMaintenanceMode));
+    // Cargar estado de mantenimiento desde el servidor
+    async function loadMaintenanceMode() {
+      try {
+        const res = await fetch("/api/settings");
+        const data = await res.json();
+        if (data.settings?.maintenance_mode !== undefined) {
+          setMaintenanceMode(data.settings.maintenance_mode);
+        }
+      } catch (e) {
+        console.error("Error loading maintenance mode:", e);
+      }
     }
+    loadMaintenanceMode();
   }, []);
 
   async function updateProduct(id, updates) {
@@ -152,11 +161,26 @@ export default function AdminProductsPage() {
     }
   }
 
-  function toggleMaintenanceMode() {
-    const newMode = !maintenanceMode;
-    setMaintenanceMode(newMode);
-    localStorage.setItem("maintenanceMode", JSON.stringify(newMode));
-    alert(newMode ? "Modo mantenimiento activado" : "Modo mantenimiento desactivado");
+  async function toggleMaintenanceMode() {
+    setLoadingMaintenance(true);
+    try {
+      const newMode = !maintenanceMode;
+      const res = await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ maintenance_mode: newMode })
+      });
+      const data = await res.json();
+      if (data.settings) {
+        setMaintenanceMode(data.settings.maintenance_mode);
+        alert(data.settings.maintenance_mode ? "Modo mantenimiento activado" : "Modo mantenimiento desactivado");
+      }
+    } catch (e) {
+      console.error("Error toggling maintenance mode:", e);
+      alert("Error al cambiar modo de mantenimiento");
+    } finally {
+      setLoadingMaintenance(false);
+    }
   }
 
   async function reimportAllProducts() {
@@ -313,13 +337,14 @@ export default function AdminProductsPage() {
           </button>
           <button
             onClick={toggleMaintenanceMode}
+            disabled={loadingMaintenance}
             className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
               maintenanceMode
                 ? "bg-red-500 text-white hover:bg-red-400"
                 : "bg-gray-500 text-white hover:bg-gray-400"
-            }`}
+            } disabled:opacity-50`}
           >
-            {maintenanceMode ? "Desactivar mantenimiento" : "Activar mantenimiento"}
+            {loadingMaintenance ? "Cargando..." : maintenanceMode ? "Desactivar mantenimiento" : "Activar mantenimiento"}
           </button>
           {selectedProducts.size > 0 && (
             <button

@@ -37,6 +37,9 @@ export async function PUT(req) {
     if (body.tatiana_phone !== undefined) {
       updates.tatiana_phone = body.tatiana_phone;
     }
+    if (body.maintenance_mode !== undefined) {
+      updates.maintenance_mode = body.maintenance_mode;
+    }
 
     const { data, error } = await supabase
       .from("store_settings")

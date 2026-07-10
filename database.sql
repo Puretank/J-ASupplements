@@ -9,6 +9,7 @@ create table if not exists store_settings (
   whatsapp_phone text default '573001112233',
   julian_phone text default '573001112233',
   angie_phone text default '573011111111',
+  maintenance_mode boolean default false,
   updated_at timestamp with time zone default now(),
   constraint single_settings check (id = 1)
 );
@@ -62,6 +63,7 @@ alter table products add column if not exists sabores text[];
 alter table products add column if not exists iherb_url text;
 alter table products add column if not exists imagenes text[];
 alter table products add column if not exists imagenes_seleccionadas text[];
+alter table store_settings add column if not exists maintenance_mode boolean default false;
 
 -- Pedidos
 create table if not exists orders (
