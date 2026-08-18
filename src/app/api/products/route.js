@@ -1,61 +1,67 @@
 import { createServerClient } from "../../../lib/supabase-server";
 
 export async function GET(req) {
-  const { searchParams } = new URL(req.url);
-  const categoria = searchParams.get("categoria");
-  const search = searchParams.get("search");
-  const marca = searchParams.get("marca");
+  try {
+    const { searchParams } = new URL(req.url);
+    const categoria = searchParams.get("categoria");
+    const search = searchParams.get("search");
+    const marca = searchParams.get("marca");
 
-  const supabase = createServerClient();
-  let query = supabase
-    .from("products")
-    .select("*")
-    .order("created_at", { ascending: false });
+    const supabase = createServerClient();
+    let query = supabase
+      .from("products")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-  if (search) {
-    query = query.or(
-      `nombre.ilike.%${search}%,marca.ilike.%${search}%`
-    );
-  }
+    if (search) {
+      query = query.or(
+        `nombre.ilike.%${search}%,marca.ilike.%${search}%`
+      );
+    }
 
-  const { data, error } = await query;
+    const { data, error } = await query;
 
-  if (error) {
+    if (error) {
+      console.error("Error fetching products:", error);
+      return Response.json({ error: error.message }, { status: 500 });
+    }
+
+    let products = data || [];
+    if (categoria && categoria !== "all") {
+      products = products.filter((product) => product.categoria === categoria);
+    }
+
+    if (marca && marca !== "all") {
+      products = products.filter((product) => product.marca === marca);
+    }
+
+    const withStats = searchParams.get("stats") === "true";
+
+    if (!withStats || !products?.length) {
+      return Response.json({ products });
+    }
+
+    const { data: soldItems } = await supabase
+      .from("order_items")
+      .select("product_id, quantity, orders!inner(payment_status)")
+      .eq("orders.payment_status", "paid");
+
+    const soldMap = {};
+    soldItems?.forEach((item) => {
+      soldMap[item.product_id] =
+        (soldMap[item.product_id] || 0) + item.quantity;
+    });
+
+    const productsWithStats = products.map((p) => ({
+      ...p,
+      unidades_vendidas: soldMap[p.id] || 0
+    }));
+
+    return Response.json({ products: productsWithStats });
+  } catch (error) {
+    console.error("Unexpected error in GET /api/products:", error);
     return Response.json({ error: error.message }, { status: 500 });
   }
-
-  let products = data || [];
-  if (categoria && categoria !== "all") {
-    products = products.filter((product) => product.categoria === categoria);
-  }
-
-  if (marca && marca !== "all") {
-    products = products.filter((product) => product.marca === marca);
-  }
-
-  const withStats = searchParams.get("stats") === "true";
-
-  if (!withStats || !products?.length) {
-    return Response.json({ products });
-  }
-
-  const { data: soldItems } = await supabase
-    .from("order_items")
-    .select("product_id, quantity, orders!inner(payment_status)")
-    .eq("orders.payment_status", "paid");
-
-  const soldMap = {};
-  soldItems?.forEach((item) => {
-    soldMap[item.product_id] =
-      (soldMap[item.product_id] || 0) + item.quantity;
-  });
-
-  const productsWithStats = products.map((p) => ({
-    ...p,
-    unidades_vendidas: soldMap[p.id] || 0
-  }));
-
-  return Response.json({ products: productsWithStats });
 }
 
 const MISSING_COLUMN_REGEX = /could not find the ['"]?([^'"]+)['"]? column|column ['"]?([^'"]+)['"]? does not exist/i;
