@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const links = [
-  { href: "/admin", label: "Dashboard", icon: "📊" },
   { href: "/admin/products", label: "Productos", icon: "📦" },
   { href: "/admin/import", label: "Importar", icon: "🔗" },
   { href: "/admin/settings", label: "Configuración", icon: "⚙️" }
@@ -29,10 +28,7 @@ export default function AdminSidebar() {
 
       <nav className="flex-1 space-y-1 p-4">
         {links.map((link) => {
-          const isActive =
-            link.href === "/admin"
-              ? pathname === "/admin"
-              : pathname.startsWith(link.href);
+          const isActive = pathname.startsWith(link.href);
 
           return (
             <Link

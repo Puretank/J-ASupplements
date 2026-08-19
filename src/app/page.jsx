@@ -14,7 +14,8 @@ const CATEGORIAS = [
   "Creatina",
   "Omega-3",
   "Colágeno Y Resveratrol",
-  "Salud Intestinal"
+  "Salud Intestinal",
+  "Refuerzos para la testosterona"
 ];
 
 export default function Home() {
