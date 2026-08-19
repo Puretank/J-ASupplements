@@ -147,15 +147,19 @@ export async function POST(req) {
 
     const { data: existing } = await supabase
       .from("products")
-      .select("id")
+      .select("id, pendiente_imagenes")
       .eq("nombre", data.nombre)
       .maybeSingle();
 
     let result;
 
     if (existing) {
+      // Si es una reimportación, mantener el estado pendiente_imagenes actual
+      productData.pendiente_imagenes = existing.pendiente_imagenes;
       result = await updateProductWithFallback(supabase, existing.id, productData);
     } else {
+      // Nuevo producto: marcar como pendiente de selección de imágenes
+      productData.pendiente_imagenes = true;
       result = await insertProductWithFallback(supabase, productData);
     }
 

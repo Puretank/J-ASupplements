@@ -6,12 +6,18 @@ export async function GET(req) {
     const categoria = searchParams.get("categoria");
     const search = searchParams.get("search");
     const marca = searchParams.get("marca");
+    const includePending = searchParams.get("include_pending") === "true";
 
     const supabase = createServerClient();
     let query = supabase
       .from("products")
       .select("*")
       .order("created_at", { ascending: false });
+
+    // Solo filtrar productos pendientes si no se solicitan explícitamente
+    if (!includePending) {
+      query = query.eq("pendiente_imagenes", false);
+    }
 
     if (search) {
       query = query.or(

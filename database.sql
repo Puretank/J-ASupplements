@@ -63,6 +63,7 @@ alter table products add column if not exists sabores text[];
 alter table products add column if not exists iherb_url text;
 alter table products add column if not exists imagenes text[];
 alter table products add column if not exists imagenes_seleccionadas text[];
+alter table products add column if not exists pendiente_imagenes boolean default true;
 alter table store_settings add column if not exists maintenance_mode boolean default false;
 
 -- Pedidos

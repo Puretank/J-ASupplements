@@ -32,7 +32,7 @@ export default function AdminProductsPage() {
   const [loadingMaintenance, setLoadingMaintenance] = useState(false);
 
   async function loadProducts() {
-    const res = await fetch("/api/products?stats=true");
+    const res = await fetch("/api/products?stats=true&include_pending=true");
     const data = await res.json();
     setProducts(data.products || []);
     setLoading(false);
@@ -128,7 +128,8 @@ export default function AdminProductsPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          imagenes_seleccionadas: Array.from(wizardSelectedImages)
+          imagenes_seleccionadas: Array.from(wizardSelectedImages),
+          pendiente_imagenes: false
         })
       });
     } catch (e) {
@@ -305,12 +306,32 @@ export default function AdminProductsPage() {
     });
   }
 
-  function toggleAllSelection() {
+  async function toggleAllSelection() {
     if (selectedProducts.size === products.length) {
       setSelectedProducts(new Set());
     } else {
       setSelectedProducts(new Set(products.map((p) => p.id)));
     }
+  }
+
+  async function makeAllVisible() {
+    const pendingProducts = products.filter(p => p.pendiente_imagenes);
+    if (pendingProducts.length === 0) {
+      alert("No hay productos pendientes de hacer visibles");
+      return;
+    }
+
+    if (!confirm(`¿Hacer visibles ${pendingProducts.length} productos pendientes?`)) return;
+
+    for (const product of pendingProducts) {
+      await fetch(`/api/products/${product.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pendiente_imagenes: false })
+      });
+    }
+
+    await loadProducts();
   }
 
   if (loading) {
@@ -327,6 +348,12 @@ export default function AdminProductsPage() {
           <p className="text-gray-400">{products.length} productos en catálogo</p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={makeAllVisible}
+            className="rounded-xl bg-purple-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-purple-400"
+          >
+            Hacer todos visibles
+          </button>
           <button
             onClick={startImageWizard}
             className="rounded-xl bg-brand-500 px-4 py-2 text-sm font-semibold text-black transition hover:bg-brand-400"
@@ -424,6 +451,7 @@ export default function AdminProductsPage() {
               <th>Nombre</th>
               <th>Marca</th>
               <th>Categoría</th>
+              <th>Estado</th>
               <th>Precio original</th>
               <th>Precio descuento</th>
               <th>Precio final</th>
@@ -476,6 +504,17 @@ export default function AdminProductsPage() {
                   )}
                 </td>
                 <td>{product.marca}</td>
+                <td>
+                  {product.pendiente_imagenes ? (
+                    <span className="inline-flex items-center rounded-full bg-yellow-500/10 px-2 py-1 text-xs font-medium text-yellow-400">
+                      ⏳ Pendiente
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full bg-green-500/10 px-2 py-1 text-xs font-medium text-green-400">
+                      ✓ Visible
+                    </span>
+                  )}
+                </td>
                 <td>
                   {editing === `${product.id}-categoria` ? (
                     <select
@@ -761,7 +800,8 @@ export default function AdminProductsPage() {
                       method: "PATCH",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
-                        imagenes_seleccionadas: imageEditor.imagenes_seleccionadas
+                        imagenes_seleccionadas: imageEditor.imagenes_seleccionadas,
+                        pendiente_imagenes: false
                       })
                     });
                     await loadProducts();
